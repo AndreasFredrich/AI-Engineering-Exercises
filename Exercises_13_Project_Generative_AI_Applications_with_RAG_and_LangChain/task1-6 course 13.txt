@@ -1,0 +1,159 @@
+task1
+
+from langchain.document_loaders import PyPDFLoader
+
+# Step 1: Loading the document
+pdf_path = "1.pdf"  
+loader = PyPDFLoader(pdf_path)
+pages = loader.load()
+
+# Step 2: Printing 1000 chars
+first_1000_chars = pages[0].page_content[:1000]
+print("First 1000 chars of the document:\n")
+print(first_1000_chars)
+
+task2
+
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+latex_text = """\documentclass{article}\begin{document}\maketitle\section{Introduction}
+Large language models (LLMs) are a type of machine learning model that can be trained on vast amounts of text data to generate human-like language. In recent years, LLMs have made significant advances in various natural language processing tasks, including language translation, text generation, and sentiment analysis.
+\subsection{History of LLMs}
+The earliest LLMs were developed in the 1980s and 1990s, but they were limited by the amount of data that could be processed and the computational power available at the time. In the past decade, however, advances in hardware and software have made it possible to train LLMs on massive datasets, leading to significant improvements in performance.
+\subsection{Applications of LLMs}
+LLMs have many applications in the industry, including chatbots, content creation, and virtual assistants. They can also be used in academia for research in linguistics, psychology, and computational linguistics.
+\end{document}
+"""
+splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
+splits = splitter.split_text(latex_text)
+print("\n--- Gesplittete Chunks ---\n")
+for i, chunk in enumerate(splits):
+    print(f"Chunk {i+1}:\n{chunk}\n")
+
+task3
+
+from rag.watsonx_embedding import WatsonxEmbedding
+
+def main():
+    # Step1 intial emb
+    embedding_model = WatsonxEmbedding()
+
+    # Step2
+    query = "How are you?"
+
+    # Step3 calculate
+    embedding = embedding_model.embed_query(query)
+
+    # Step4 output
+    print("first 5 Embedding-Values:", embedding[:5])
+
+if __name__ == "__main__":
+    main()
+
+Task 4
+
+from langchain.document_loaders import TextLoader
+from langchain.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from rag.watsonx_embedding import WatsonxEmbedding
+loader = TextLoader("4.txt", encoding="utf-8")
+docs = loader.load()
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+splits = splitter.split_documents(docs)
+embedding_model = WatsonxEmbedding()
+vectordb = Chroma.from_documents(splits, embedding_model, persist_directory="./chroma_db")
+vectordb.persist()
+query = "Smoking policy"
+results = vectordb.similarity_search(query, k=5)
+for i, result in enumerate(results, 1):
+    print(" | ".join([f"Result {i+1}: {res.page_content}" for i, res in enumerate(results)]))
+
+----
+
+Result 1: Lost or Stolen Devices: Immediately report any lost or stolen mobile devices to the IT department or your supervisor.
+
+Consequences: Non-compliance with this policy may result in disciplinary actions, including potential loss of mobile phone privileges. This policy encourages the responsible use of mobile devices in line with legal and ethical standards. Employees are expected to understand and follow these guidelines. The policy is regularly reviewed to stay current with evolving technology and security best practices. | 
+
+Result 2: Lost or Stolen Devices: Immediately report any lost or stolen mobile devices to the IT department or your supervisor. Consequences: Non-compliance with this policy may result in disciplinary actions, including potential loss of mobile phone privileges. This policy encourages the responsible use of mobile devices in line with legal and ethical standards. Employees are expected to understand and follow these guidelines. The policy is regularly reviewed to stay current with evolving technology and security best practices. | 
+
+Result 3: Lost or Stolen Devices: Immediately report any lost or stolen mobile devices to the IT department or your supervisor. Consequences: Non-compliance with this policy may result in disciplinary actions, including potential loss of mobile phone privileges. This policy encourages the responsible use of mobile devices in line with legal and ethical standards. Employees are expected to understand and follow these guidelines. The policy is regularly reviewed to stay current with evolving technology and security best practices. | 
+
+Result 4: Lost or Stolen Devices: Immediately report any lost or stolen mobile devices to the IT department or your supervisor. Consequences: Non-compliance with this policy may result in disciplinary actions, including potential loss of mobile phone privileges. This policy encourages the responsible use of mobile devices in line with legal and ethical standards. Employees are expected to understand and follow these guidelines. The policy is regularly reviewed to stay current with evolving technology and security best practices. | 
+
+Result 5: Lost or Stolen Devices: Immediately report any lost or stolen mobile devices to the IT department or your supervisor. Consequences: Non-compliance with this policy may result in disciplinary actions, including potential loss of mobile phone privileges. This policy encourages the responsible use of mobile devices in line with legal and ethical standards. Employees are expected to understand and follow these guidelines. The policy is regularly reviewed to stay current with evolving technology and security best practices.
+
+Task 5
+
+ordner rag
+
+file watsonx_embedding.py
+
+class WatsonxEmbedding:
+    def __init__(self):
+        # Modellname nur symbolisch
+        self.model_id = "mistralai/mixtral-8x7b-instruct-v01"
+
+    def embed_query(self, query: str):
+        return [len(query) * 0.01 + i * 0.001 for i in range(384)]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [[len(text) * 0.01 + i * 0.001 for i in range(384)] for text in texts]
+
+# task5_retriever.py
+
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from rag.watsonx_embedding import WatsonxEmbedding
+loader = TextLoader("5.txt", encoding="utf-8") 
+docs = loader.load()
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+splits = splitter.split_documents(docs)
+embedding_model = WatsonxEmbedding()
+vectordb = Chroma.from_documents(splits, embedding_model, persist_directory="./chroma_db_task5")
+vectordb.persist()
+retriever = vectordb.as_retriever(search_kwargs={"k": 2})
+query = "Email policy"
+results = retriever.get_relevant_documents(query)
+print(" | ".join([f"Result {i+1}: {doc.page_content[:120]}..." for i, doc in enumerate(results)]))
+
+Task 6
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from rag.watsonx_embedding import WatsonxEmbedding
+from langchain.chains import RetrievalQA
+from langchain_core.language_models import FakeListLLM  # Dummy-Modell ersetzen bei Bedarf
+loader = PyPDFLoader("1.pdf")
+docs = loader.load()
+
+# 2. Splitten
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+splits = splitter.split_documents(docs)
+
+# 3. Embedding + Vektordatenbank
+embedding_model = WatsonxEmbedding()
+vectordb = Chroma.from_documents(splits, embedding_model, persist_directory="./chroma_db_task6")
+vectordb.persist()
+
+# 4. Retriever definieren
+retriever = vectordb.as_retriever()
+
+# 5. Dummy LLM (für echte Fälle LLM wie OpenAI, IBM oder lokal einbinden)
+class DummyLLM(FakeListLLM):
+    def generate(self, prompts, stop=None):
+        return [f"Simulierte Antwort für Prompt: {prompt}" for prompt in prompts]
+
+llm = DummyLLM(responses=["This paper discusses large language models and their adaptation strategies."])
+
+# 6. QA-Chain aufbauen
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+
+# 7. Query ausführen
+query = "What this paper is talking about?"
+result = qa_chain.run(query)
+
+# 8. Ausgabe
+print(f"Query: {query}")
+print(f"Answer: {result}")
+
